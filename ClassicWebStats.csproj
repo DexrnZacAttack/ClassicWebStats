@@ -1,0 +1,69 @@
+﻿<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{0E982E34-416A-4CC5-BA3B-1D7AACA9F179}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <NoStandardLibraries>false</NoStandardLibraries>
+    <AssemblyName>ClassicWebStats</AssemblyName>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace>ClassicWebStats</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="MCGalaxy_">
+      <HintPath>..\MCGalaxy_.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Net">
+      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization">
+      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.Runtime.Serialization.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ClassicWebStats.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".vs\ClassicWebStats\DesignTimeBuild\.dtbcache.v2" />
+    <None Include=".vs\ClassicWebStats\FileContentIndex\26e927b6-6eb7-4196-b717-ecec0b4f4339.vsidx" />
+    <None Include=".vs\ClassicWebStats\FileContentIndex\3a4fa942-8e73-489e-81f3-75d8feae9411.vsidx" />
+    <None Include=".vs\ClassicWebStats\FileContentIndex\3e47cdbf-13fa-47f7-91c8-3a4bfadf4138.vsidx" />
+    <None Include=".vs\ClassicWebStats\FileContentIndex\76bf9060-35aa-4408-bc36-8762185a0883.vsidx" />
+    <None Include=".vs\ClassicWebStats\FileContentIndex\8163f743-d2a4-44f4-a45d-8ed5bdc503f6.vsidx" />
+    <None Include=".vs\ClassicWebStats\v17\.futdcache.v2" />
+    <None Include=".vs\ClassicWebStats\v17\.suo" />
+    <None Include=".vs\ClassicWebStats\v17\DocumentLayout.backup.json" />
+    <None Include=".vs\ClassicWebStats\v17\DocumentLayout.json" />
+    <None Include=".vs\ClassicWebStats\v17\ResourceExplorer\settings.json" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSHARP.Targets" />
+  <ProjectExtensions>
+    <VisualStudio AllowExistingFolder="true" />
+  </ProjectExtensions>
+</Project>
