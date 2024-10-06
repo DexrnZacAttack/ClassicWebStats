@@ -12,9 +12,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using MCGalaxy;
 using MCGalaxy.Config;
 
@@ -123,31 +126,65 @@ namespace ClassicWebStats
             listener.Prefixes.Add(url);
             listener.Start();
             Logger.Log(LogType.Debug, "Listening on {0}", url);
-            while (listener.IsListening)
+            Task.Run(() =>
             {
-                GetCurrentStats();
-                var stats = new JsonObject
+                while (listener.IsListening)
                 {
-                    {  "PlayerCount", Stats.PlayerCount },
-                    {  "Started", Stats.Started },
-                    {  "Uptime", Stats.Uptime },
-                    {  "Players", Stats.Players },
-                    {  "MainMap", Stats.MainMap },
-                };
 
-                HttpListenerContext context = listener.GetContext();
-                HttpListenerRequest request = context.Request;
-                HttpListenerResponse response = context.Response;
-                response.Headers.Add("Server", pluginName + " " + pluginVersion + " on " + Server.SoftwareNameVersioned + ";");
-                response.ContentType = "application/json";
+                    HttpListenerContext context = listener.GetContext();
+                    HttpListenerRequest request = context.Request;
+                    HttpListenerResponse response = context.Response;
+                    response.Headers.Add("Server", pluginName + " " + pluginVersion + " on " + Server.SoftwareNameVersioned + ";");
 
-                string json = Json.SerialiseObject(stats);
-                byte[] buffer = Encoding.UTF8.GetBytes(json);
 
-                response.ContentLength64 = buffer.Length;
-                response.OutputStream.Write(buffer, 0, buffer.Length);
-                response.OutputStream.Close();
-            }
+                    if (request.Url.AbsolutePath.StartsWith("/map_skyblocks/"))
+                    {
+                        string mapName = request.Url.AbsolutePath.Substring("/map_skyblocks/".Length);
+                        if (!LevelInfo.MapExists(mapName))
+                        {
+                            var error = new JsonObject
+                        {
+                            {  "Error", "Map does not exist." },
+                        };
+                            var json = Encoding.UTF8.GetBytes(Json.SerialiseObject(error));
+
+                            response.ContentType = "application/json";
+                            response.ContentLength64 = json.Length;
+                            response.OutputStream.Write(json, 0, json.Length);
+                            response.OutputStream.Close();
+                            continue;
+                        }
+
+                        byte[] buffer = ClassicMap.GetTopBlocks(Level.Load(mapName));
+
+                        response.ContentType = "application/octet-stream";
+                        response.ContentLength64 = buffer.Length;
+                        response.OutputStream.Write(buffer, 0, buffer.Length);
+                        response.OutputStream.Close();
+
+                    }
+                    else
+                    {
+                        GetCurrentStats();
+                        var stats = new JsonObject
+                    {
+                        {  "PlayerCount", Stats.PlayerCount },
+                        {  "Started", Stats.Started },
+                        {  "Uptime", Stats.Uptime },
+                        {  "Players", Stats.Players },
+                        {  "MainMap", Stats.MainMap },
+                    };
+                        string json = Json.SerialiseObject(stats);
+                        byte[] buffer = Encoding.UTF8.GetBytes(json);
+
+                        response.ContentType = "application/json";
+                        response.ContentLength64 = buffer.Length;
+                        response.OutputStream.Write(buffer, 0, buffer.Length);
+                        response.OutputStream.Close();
+                    }
+
+                }
+            });
         }
 
         public static void StopWebServer()
@@ -155,9 +192,34 @@ namespace ClassicWebStats
             if (listener.IsListening)
             {
                 listener.Stop();
+                listener.Close();
             }
         }
 
+    }
+    
+    public static class ClassicMap
+    {
+        // modified version of danilwhale's code from when we were testing map image gen
+        public static byte[] GetTopBlocks(Level level)
+        {
+            var blocks = new byte[level.Width * level.Length];
+
+            for (var x = (ushort)0; x < level.Width; x++)
+            {
+                for (var z = (ushort)0; z < level.Length; z++)
+                {
+                    for (var y = level.Height - 1; y >= 0; y--)
+                    {
+                        var block = Block.ToRaw(level.GetBlock(x, (ushort)y, z));
+                        if (block == Block.Air) continue;
+                        blocks[x + Server.mainLevel.Width * z] = (byte)block;
+                        break;
+                    }
+                }
+            }
+            return blocks;
+        }
     }
 
     public sealed class ClassicWebStats : Plugin
