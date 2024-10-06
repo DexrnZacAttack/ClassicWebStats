@@ -129,9 +129,9 @@ namespace ClassicWebStats
                 var stats = new JsonObject
                 {
                     {  "PlayerCount", Stats.PlayerCount },
-                    {  "Players", Stats.Players },
                     {  "Started", Stats.Started },
                     {  "Uptime", Stats.Uptime },
+                    {  "Players", Stats.Players },
                     {  "MainMap", Stats.MainMap },
                 };
 
