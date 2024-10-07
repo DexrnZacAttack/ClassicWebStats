@@ -14,6 +14,8 @@ using MCGalaxy;
 using MCGalaxy.Config;
 using System;
 using System.Collections.Generic;
+using System.IO.Compression;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -157,10 +159,20 @@ namespace ClassicWebStats
                                 continue;
                             }
 
-                            byte[] buffer = ClassicMap.GetTopBlocks(Level.Load(mapName));
+                            byte[] blockBuf = ClassicMap.GetTopBlocks(Level.Load(mapName));
+                            byte[] buffer;
+
+                            using (var ms = new MemoryStream())
+                            {
+                                using (var gs = new GZipStream(ms, CompressionMode.Compress))
+                                {
+                                    gs.Write(blockBuf, 0, blockBuf.Length);
+                                }
+                                buffer = ms.ToArray();
+                            }
 
                             response.ContentType = "application/octet-stream";
-                            response.AddHeader("Content-Disposition", "attachment; filename=\"" + mapName + "_map.dat\"");
+                            response.AddHeader("Content-Disposition", "attachment; filename=\"" + mapName + "_map.dat.gz\"");
                             response.ContentLength64 = buffer.Length;
                             response.OutputStream.Write(buffer, 0, buffer.Length);
                             response.OutputStream.Close();
@@ -242,23 +254,31 @@ namespace ClassicWebStats
         // modified version of danilwhale's code from when we were testing map image gen
         public static byte[] GetTopBlocks(Level level)
         {
-            var blocks = new byte[level.Width * level.Length];
+            var width = level.Width;
+            var length = level.Length;
+            var height = level.Height;
+            var blocks = new byte[width * length];
 
-            for (var x = (ushort)0; x < level.Width; x++)
+            Parallel.For(0, width, x =>
             {
-                for (var z = (ushort)0; z < level.Length; z++)
+                for (var z = (ushort)0; z < length; z++)
                 {
-                    for (var y = level.Height - 1; y >= 0; y--)
+                    int index = x + width * z;
+                    for (var y = height - 1; y >= 0; y--)
                     {
-                        var block = Block.ToRaw(level.GetBlock(x, (ushort)y, z));
-                        if (block == Block.Air) continue;
-                        blocks[x + Server.mainLevel.Width * z] = (byte)block;
-                        break;
+                        var block = Block.ToRaw(level.GetBlock((ushort)x, (ushort)y, z));
+                        if (block != Block.Air)
+                        {
+                            blocks[index] = (byte)block;
+                            break;
+                        }
                     }
                 }
-            }
+            });
+
             return blocks;
         }
+
 
         public static Dictionary<string, ushort> GetBounds(Level level)
         {
