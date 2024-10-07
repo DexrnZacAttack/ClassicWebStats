@@ -10,16 +10,14 @@
 //reference System.Runtime.Serialization.dll
 //reference System.Core.dll
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using MCGalaxy;
 using MCGalaxy.Config;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace ClassicWebStats
 {
@@ -102,7 +100,7 @@ namespace ClassicWebStats
                 { "Players", GetPlayersStats(Server.mainLevel.players) },
                 { "Bounds", new JsonObject {
                     { "Width", (int)Server.mainLevel.Width },
-                    { "Depth", (int)Server.mainLevel.Length },
+                    { "Length", (int)Server.mainLevel.Length },
                     { "Height", (int)Server.mainLevel.Height }
                 }},
                 { "SpawnPos", new JsonObject {
@@ -122,6 +120,7 @@ namespace ClassicWebStats
 
         public static void StartWebServer()
         {
+            // TODO: NEEDS CLEANUP
             string url = "http://localhost:8081/";
             listener.Prefixes.Add(url);
             listener.Start();
@@ -137,43 +136,83 @@ namespace ClassicWebStats
                     response.Headers.Add("Server", pluginName + " " + pluginVersion + " on " + Server.SoftwareNameVersioned + ";");
 
 
-                    if (request.Url.AbsolutePath.StartsWith("/map_skyblocks/"))
+                    if (request.Url.AbsolutePath.StartsWith("/level/"))
                     {
-                        string mapName = request.Url.AbsolutePath.Substring("/map_skyblocks/".Length);
-                        if (!LevelInfo.MapExists(mapName))
+                        string rem = request.Url.AbsolutePath.Substring("/level/".Length);
+                        if (rem.Contains("/map"))
                         {
-                            var error = new JsonObject
-                        {
-                            {  "Error", "Map does not exist." },
-                        };
-                            var json = Encoding.UTF8.GetBytes(Json.SerialiseObject(error));
+                            string mapName = rem.Substring(0, rem.IndexOf("/map"));
+                            if (!LevelInfo.MapExists(mapName))
+                            {
+                                var error = new JsonObject
+                                {
+                                    {  "Error", "Map does not exist." },
+                                };
+                                var json = Encoding.UTF8.GetBytes(Json.SerialiseObject(error));
 
-                            response.ContentType = "application/json";
-                            response.ContentLength64 = json.Length;
-                            response.OutputStream.Write(json, 0, json.Length);
+                                response.ContentType = "application/json";
+                                response.ContentLength64 = json.Length;
+                                response.OutputStream.Write(json, 0, json.Length);
+                                response.OutputStream.Close();
+                                continue;
+                            }
+
+                            byte[] buffer = ClassicMap.GetTopBlocks(Level.Load(mapName));
+
+                            response.ContentType = "application/octet-stream";
+                            response.AddHeader("Content-Disposition", "attachment; filename=\"" + mapName + "_map.dat\"");
+                            response.ContentLength64 = buffer.Length;
+                            response.OutputStream.Write(buffer, 0, buffer.Length);
                             response.OutputStream.Close();
-                            continue;
                         }
+                        else if (rem.Contains("/bounds"))
+                        {
+                            string mapName = rem.Substring(0, rem.IndexOf("/bounds"));
+                            if (!LevelInfo.MapExists(mapName))
+                            {
+                                var error = new JsonObject
+                                {
+                                    {  "Error", "Map does not exist." },
+                                };
+                                var errorJson = Encoding.UTF8.GetBytes(Json.SerialiseObject(error));
 
-                        byte[] buffer = ClassicMap.GetTopBlocks(Level.Load(mapName));
+                                response.ContentType = "application/json";
+                                response.ContentLength64 = errorJson.Length;
+                                response.OutputStream.Write(errorJson, 0, errorJson.Length);
+                                response.OutputStream.Close();
+                                continue;
+                            }
 
-                        response.ContentType = "application/octet-stream";
-                        response.ContentLength64 = buffer.Length;
-                        response.OutputStream.Write(buffer, 0, buffer.Length);
-                        response.OutputStream.Close();
+                            var bounds = ClassicMap.GetBounds(Level.Load(mapName));
+                            var msg = new JsonObject
+                            {
+                                { "Width", (int)bounds["Width"] },
+                                { "Length", (int)bounds["Length"] },
+                                { "Height", (int)bounds["Height"] }
+                            };
+
+                            var boundsJson = Encoding.UTF8.GetBytes(Json.SerialiseObject(msg));
+                            response.ContentType = "application/json";
+                            response.ContentLength64 = boundsJson.Length;
+                            response.OutputStream.Write(boundsJson, 0, boundsJson.Length);
+                            response.OutputStream.Close();
+                        } else
+                        {
+                            Logger.Log(LogType.UserActivity, "Unknown page:", request.Url.AbsolutePath);
+                        }
 
                     }
                     else
                     {
                         GetCurrentStats();
                         var stats = new JsonObject
-                    {
-                        {  "PlayerCount", Stats.PlayerCount },
-                        {  "Started", Stats.Started },
-                        {  "Uptime", Stats.Uptime },
-                        {  "Players", Stats.Players },
-                        {  "MainMap", Stats.MainMap },
-                    };
+                        {
+                            {  "PlayerCount", Stats.PlayerCount },
+                            {  "Started", Stats.Started },
+                            {  "Uptime", Stats.Uptime },
+                            {  "Players", Stats.Players },
+                            {  "MainMap", Stats.MainMap },
+                        };
                         string json = Json.SerialiseObject(stats);
                         byte[] buffer = Encoding.UTF8.GetBytes(json);
 
@@ -197,7 +236,7 @@ namespace ClassicWebStats
         }
 
     }
-    
+
     public static class ClassicMap
     {
         // modified version of danilwhale's code from when we were testing map image gen
@@ -220,13 +259,23 @@ namespace ClassicWebStats
             }
             return blocks;
         }
+
+        public static Dictionary<string, ushort> GetBounds(Level level)
+        {
+            return new Dictionary<string, ushort>
+            {
+                { "Width", level.Width },
+                { "Length", level.Length },
+                { "Height", level.Height }
+            };
+        }
     }
 
     public sealed class ClassicWebStats : Plugin
     {
         public override string name { get { return "Classic Web Stats"; } }
         public override string creator { get { return "DexrnZacAttack"; } }
-        public override string MCGalaxy_Version { get { return "1.1.0.0"; } }
+        public override string MCGalaxy_Version { get { return "1.2.0.0"; } }
 
         public override void Load(bool startup)
         {
